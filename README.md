@@ -1,5 +1,9 @@
 # Тайный Трусосанта 🩲
 
+Сайт: https://naymskim.github.io/trusosanta/
+
+Supabase: отдельный проект `Trusosanta` (`wqtnijawelezewpmzijw`), регион EU West (Ireland).
+
 Самостоятельная регистрация без аккаунтов: имя, размер, секретная ссылка. Каждый участник узнаёт только своего получателя. Дедлайн — **5 ноября 2026, 19:19 МСК** (16:19 UTC).
 
 ## Размещение: GitHub Pages + Supabase
@@ -14,7 +18,7 @@
 
 1. Создать отдельный проект Supabase либо выбрать подходящий существующий.
 2. Применить `supabase/migrations/202610270001_trusosanta.sql` через миграции CLI или SQL Editor. Выполнять один раз; миграция не удаляет данные существующих сторонних таблиц.
-3. Установить секрет Edge Function `ALLOWED_ORIGIN=https://naymskim.github.io`.
+3. Разрешённый origin по умолчанию — `https://naymskim.github.io`. Для другого домена переопределить переменную Edge Function `ALLOWED_ORIGIN`.
 4. Развернуть `supabase/functions/trusosanta-api/index.ts`, имя функции `trusosanta-api`, **verify_jwt=false**. Пользовательская авторизация реализована секретными ссылками, а не JWT пользователей. Публична только регистрация; чтение и изменения требуют личного ключа.
 5. `SUPABASE_URL` и `SUPABASE_SERVICE_ROLE_KEY` доступны только внутри Edge Function. Ни один приватный ключ не должен попадать в `config.js`, HTML или git.
 6. Указать в `config.js`: `apiBase: "https://PROJECT_REF.supabase.co/functions/v1/trusosanta-api"`.

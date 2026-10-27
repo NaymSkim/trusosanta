@@ -10,7 +10,7 @@ const json = (body: unknown, status: number, headers: HeadersInit) => new Respon
 });
 
 Deno.serve(async (request: Request) => {
-  const allowedOrigin = Deno.env.get('ALLOWED_ORIGIN');
+  const allowedOrigin = Deno.env.get('ALLOWED_ORIGIN') || 'https://naymskim.github.io';
   const origin = request.headers.get('Origin');
   const cors = { 'Access-Control-Allow-Origin': allowedOrigin || '',
     'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
