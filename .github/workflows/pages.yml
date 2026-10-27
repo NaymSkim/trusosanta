@@ -1,0 +1,32 @@
+name: Publish GitHub Pages
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check server configuration
+        run: |
+          node -e 'const fs=require("fs"), vm=require("vm"); const context={window:{}}; vm.runInNewContext(fs.readFileSync("config.js","utf8"),context); if(!/^https:\/\/[a-z0-9-]+\.supabase\.co\/functions\/v1\/trusosanta-api$/.test(context.window.TRUSOSANTA_CONFIG.apiBase)) throw Error("Configure Supabase before publishing");'
+      - uses: actions/configure-pages@v5
+      - name: Package only public assets
+        run: |
+          mkdir -p _site
+          cp index.html config.js _site/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Publish
+        id: deployment
+        uses: actions/deploy-pages@v4

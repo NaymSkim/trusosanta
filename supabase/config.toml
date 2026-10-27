@@ -1,0 +1,4 @@
+project_id = "trusosanta"
+
+[functions.trusosanta-api]
+verify_jwt = false

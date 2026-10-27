@@ -1,0 +1,14 @@
+import { test, beforeEach } from 'node:test';
+import assert from 'node:assert/strict';
+let handler;
+const env = {ALLOWED_ORIGIN:'https://naymskim.github.io',SUPABASE_URL:'https://test-project.supabase.co',SUPABASE_SERVICE_ROLE_KEY:'server-only-test-secret'};
+globalThis.Deno={env:{get:key=>env[key]},serve:fn=>{handler=fn;}};
+await import('../supabase/functions/trusosanta-api/index.ts');
+let rpc;
+beforeEach(()=>{globalThis.fetch=async(url,options)=>{rpc={url,options};return Response.json({status:'open',entry:{name:'Лена',size:'L'},recipient:null});};});
+const request=(path='/api/status',method='GET',headers={},body)=>new Request('https://test-project.supabase.co/functions/v1/trusosanta-api'+path,{method,headers:{Origin:env.ALLOWED_ORIGIN,...headers},body});
+test('public status and CORS preflight',async()=>{const r=await handler(request());assert.equal(r.status,200);assert.equal(r.headers.get('Access-Control-Allow-Origin'),env.ALLOWED_ORIGIN);assert.match(r.headers.get('Cache-Control'),/no-store/);assert.equal((await handler(request('/api/me','OPTIONS'))).status,204);});
+test('foreign origins and absent personal keys are rejected',async()=>{assert.equal((await handler(request('/api/status','GET',{Origin:'https://attacker.example'}))).status,403);assert.equal((await handler(request('/api/me'))).status,401);assert.equal((await handler(request('/api/me','GET',{'x-participant-key':'bad'}))).status,401);});
+test('personal key is hashed; service credential stays server-side',async()=>{const token='a'.repeat(64);const r=await handler(request('/api/entries','POST',{'x-participant-key':token,'Content-Type':'application/json'},JSON.stringify({name:'Лена',size:'L'})));assert.equal(r.status,200);const body=JSON.parse(rpc.options.body);assert.equal(body.p_action,'create');assert.match(body.p_key_hash,/^[a-f0-9]{64}$/);assert.notEqual(body.p_key_hash,token);assert.equal(rpc.options.headers.apikey,env.SUPABASE_SERVICE_ROLE_KEY);const output=await r.text();assert.ok(!output.includes(token));assert.ok(!output.includes(env.SUPABASE_SERVICE_ROLE_KEY));});
+test('payloads are validated and bounded',async()=>{const headers={'x-participant-key':'b'.repeat(64),'Content-Type':'application/json'};assert.equal((await handler(request('/api/entries','POST',headers,'null'))).status,400);assert.equal((await handler(request('/api/entries','POST',headers,'a'.repeat(4097)))).status,413);assert.equal((await handler(request('/api/entries','POST',{'x-participant-key':'b'.repeat(64)},'{}'))).status,415);});
+test('upstream errors are redacted and closed-deadline status preserved',async()=>{globalThis.fetch=async()=>Response.json({secret:'private-db-details'},{status:500});const r=await handler(request());assert.equal(r.status,503);assert.ok(!(await r.text()).includes('private-db-details'));globalThis.fetch=async()=>Response.json({code:409,error:'Приём заявок завершён.'});assert.equal((await handler(request())).status,409);});
