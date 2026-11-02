@@ -53,11 +53,11 @@
 <div class="actions" id="edit-actions"><button type="button" class="secondary" id="edit">Изменить заявку</button><button type="button" class="danger" id="delete">Удалить</button></div>
 <div class="delete-box" id="delete-confirm" hidden><p>Удалить твою заявку?</p><div class="actions"><button type="button" class="secondary" id="cancel-delete">Оставить</button><button type="button" class="danger" id="confirm-delete">Да, удалить</button></div></div>
 </div>
-<div class="closed" id="closed-view" hidden><div aria-hidden="true" style="font-size:40px">🩲</div><h2>Приём заявок завершён</h2><p>Трусоданные принимались до 5 ноября 2026, 19:19 МСК.<br>Уже участвуешь? Открой свою секретную ссылку.</p></div>
+<div class="closed" id="closed-view" hidden><div aria-hidden="true" style="font-size:40px">🩲</div><h2>Приём заявок завершён</h2><p>Трусоданные принимались до <span id="closed-deadline">2 ноября 2026, 12:12 МСК</span>.<br>Уже участвуешь? Открой свою секретную ссылку.</p></div>
 <button type="button" class="secondary" id="retry" hidden>Повторить подключение</button>
 <p class="error" role="alert" id="error" hidden></p><p id="status" role="status" class="hint" style="margin-bottom:0"></p>
 </div>
-<div class="countdown"><div class="count-label" id="count-label">До большой трусожеребьёвки</div><div class="clock" role="timer" aria-label="Обратный отсчёт до 5 ноября 2026, 19:19 по Москве"><div class="unit"><b id="days">—</b><small>дней</small></div><span class="separator">:</span><div class="unit"><b id="hours">—</b><small>часов</small></div><span class="separator">:</span><div class="unit"><b id="minutes">—</b><small>минут</small></div><span class="separator">:</span><div class="unit"><b id="seconds">—</b><small>секунд</small></div></div><p class="date">5 ноября 2026 · 19:19 по Москве</p></div>
+<div class="countdown"><div class="count-label" id="count-label">До большой трусожеребьёвки</div><div class="clock" role="timer" aria-label="Обратный отсчёт до 2 ноября 2026, 12:12 по Москве"><div class="unit"><b id="days">—</b><small>дней</small></div><span class="separator">:</span><div class="unit"><b id="hours">—</b><small>часов</small></div><span class="separator">:</span><div class="unit"><b id="minutes">—</b><small>минут</small></div><span class="separator">:</span><div class="unit"><b id="seconds">—</b><small>секунд</small></div></div><p class="date">2 ноября 2026 · 12:12 по Москве</p></div>
 </section>
 <section class="steps" aria-label="Идея обмена подарками"><div class="step"><span class="step-no">1</span><div><strong>Расскажи о себе</strong><p>Имя и размер. Без лишних подробностей.</p></div></div><div class="step"><span class="step-no">2</span><div><strong>Доверься случаю</strong><p>Сохрани личную ссылку и дождись жеребьёвки.</p></div></div><div class="step"><span class="step-no">3</span><div><strong>Подари трусчастье</strong><p>Красивые, смешные. Главное — от души.</p></div></div></section>
 </main><footer class="footer">Сделано с заботой <span>♥</span> И с хорошей резинкой</footer>
@@ -66,7 +66,7 @@
 'use strict';
 const LOCAL_KEY='trusosanta-local-entry-v1';
 const TOKEN_KEY='trusosanta-personal-key-v1';
-const DEADLINE=Date.parse('2026-11-05T19:19:00+03:00');
+let DEADLINE=Date.parse('2026-11-02T12:12:00+03:00');
 const SIZES=['XS','S','M','L','XL','XXL','3XL','4XL','Другой'];
 const $=id=>document.getElementById(id);
 const API_BASE=(window.TRUSOSANTA_CONFIG?.apiBase||'').replace(/\/$/,'');
@@ -82,7 +82,17 @@ function restoreToken(){const fragment=new URLSearchParams(location.hash.slice(1
 function setToken(value){token=value;if(value){storageSet(TOKEN_KEY,value);history.replaceState(null,'',location.pathname+location.search+'#key='+value);}else{storageRemove(TOKEN_KEY);history.replaceState(null,'',location.pathname+location.search);}}
 function newToken(){const bytes=crypto.getRandomValues(new Uint8Array(32));return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');}
 async function api(path,method='GET',data){const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),12000);try{const headers={'Accept':'application/json'};if(token){if(API_BASE)headers['x-participant-key']=token;else headers.Authorization='Bearer '+token;}if(data)headers['Content-Type']='application/json';const response=await fetch(API_BASE+path,{method,headers,body:data?JSON.stringify(data):undefined,cache:'no-store',credentials:'omit',signal:controller.signal});let result;try{result=await response.json();}catch{throw new Error('Сервис регистрации не отвечает. Попробуй ещё раз чуть позже.');}if(!response.ok){const error=new Error(result.error||'Не удалось выполнить запрос.');error.status=response.status;throw error;}return result;}catch(error){if(error.name==='AbortError'||error instanceof TypeError)throw new Error('Не удалось связаться с сервером. Проверь интернет и попробуй ещё раз.');throw error;}finally{clearTimeout(timeout);}}
-function accept(result){phase=result.status;offset=result.serverTime-Date.now();if('entry' in result)entry=result.entry;if('recipient' in result)recipient=result.recipient;}
+function syncDeadline(value){
+ if(!Number.isFinite(value)||value<=0)return;
+ DEADLINE=value;
+ const date=new Date(value);
+ const day=new Intl.DateTimeFormat('ru-RU',{day:'numeric',month:'long',year:'numeric',timeZone:'Europe/Moscow'}).format(date).replace(/\s?г\.$/,'');
+ const time=new Intl.DateTimeFormat('ru-RU',{hour:'2-digit',minute:'2-digit',hourCycle:'h23',timeZone:'Europe/Moscow'}).format(date);
+ document.querySelector('.date').textContent=day+' · '+time+' по Москве';
+ document.querySelector('.clock').setAttribute('aria-label','Обратный отсчёт до '+day+', '+time+' по Москве');
+ $('closed-deadline').textContent=day+', '+time+' МСК';
+}
+function accept(result){syncDeadline(result.deadline);phase=result.status;offset=result.serverTime-Date.now();if('entry' in result)entry=result.entry;if('recipient' in result)recipient=result.recipient;}
 function render(){const ended=closed();$('form-view').hidden=ended||!!entry&&!editing;$('success-view').hidden=!entry||editing&&!ended;$('closed-view').hidden=!ended||!!entry;$('edit-actions').hidden=ended;$('delete-confirm').hidden=true;$('personal-link-box').hidden=localMode||!entry;$('recipient-box').hidden=!recipient;$('draw-message').hidden=true;
  if(entry){$('saved-name').textContent=entry.name;$('saved-size').textContent=entry.size;$('success-title').textContent=localMode?'Трусоданные на месте!':'Ты в игре!';$('success-copy').textContent=localMode?'Предпросмотр: заявка сохранена только в этом браузере.':'Трусоданные приняты. Сохрани личную ссылку — она твой пропуск к результату.';if(!localMode)$('personal-link').value=location.origin+location.pathname+'#key='+token;
  if(recipient){$('recipient-name').textContent=recipient.name;$('recipient-size').textContent=recipient.size;$('success-title').textContent='Санта, пора действовать!';}

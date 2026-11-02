@@ -16,7 +16,7 @@ import sqlite3
 import time
 from urllib.parse import urlsplit
 
-DEADLINE = datetime.fromisoformat('2026-11-05T19:19:00+03:00').timestamp()
+DEADLINE = datetime.fromisoformat('2026-11-02T12:12:00+03:00').timestamp()
 ROOT = Path(__file__).resolve().parent
 
 
